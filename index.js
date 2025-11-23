@@ -65,9 +65,9 @@ const HTTP_POST = "POST",
     HTTP_GET = "GET";
 
 
-const PREFERRED_SLOTS = config.preferredSlots || ['07:00:00', '08:00:00', '09:00:00', '19:00', '20:00', '21:00', '16:00', '17:00'];
+const PREFERRED_SLOTS = config.preferredSlots || ['09:00:00'];
 const PREFERRED_CENTER = config.preferredCenter || 1515;
-const PREFERRED_WORKOUT_NAME = config.preferredWorkout || "BOXING";
+const PREFERRED_WORKOUT_NAME = config.preferredWorkout || "HRX WORKOUT";
 const ENABLE_WAITLIST = config.enableWaitlist !== false;
 
 const PREFERRED_CLASSES_IN_ORDER = Object.values(ActivityType).filter(

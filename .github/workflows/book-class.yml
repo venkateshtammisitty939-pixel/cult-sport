@@ -1,8 +1,6 @@
 name: Auto Book Cult Class
 
-on:
-  schedule:
-    - cron: '30 16 * * *'  # Runs at 16:30 UTC (10:00 PM IST) everyday
+on:  
   workflow_dispatch:
 
 jobs:

@@ -1,54 +1,40 @@
 "use strict";
-const config = require('./config'),
-    /*
-    Maintaining a list of activities and my preference
-    The id field is the workoutId which part of classes object as a response of `api/cult/classes/` API
-    */
+const config = require('./config');
 
-    ActivityType = {
-        "hrx": {
-            "id": 69,
-            "name": "HRX WORKOUT",
-            "displayText": "HRX WORKOUT",
-            "preference": 1
-        },
-        "strength": {
-            "id": 69,
-            "name": "ADIDAS STRENGTH+",
-            "displayText": "ADIDAS STRENGTH+",
-            "preference": 2
-        },
-        "yoga": {
-            "id": 5,
-            "name": "EVOLVE YOGA",
-            "displayText": "EVOLVE YOGA",
-            "preference": 3
-        },
-        "dance": {
-            "id": 56,
-            "name": "DANCE FITNESS",
-            "displayText": "DANCE FITNESS",
-            "preference": 4
-        },
-        "burn": {
-            "id": 66,
-            "name": "BURN",
-            "displayText": "BURN",
-            "preference": 5
-        },
-        "boxing": {
-            "id": 8,
-            "name": "BOXING BAG WORKOUT",
-            "displayText": "BOXING BAG WORKOUT",
-            "preference": 6
-        },
-        "fusionDance": {
-            "id": 56,
-            "name": "FUSION DANCE FITNESS",
-            "displayText": "FUSION DANCE FITNESS",
-            "preference": 7
-        }
-    };
+// Update for Cult Sport activities
+const ActivityType = {
+    "basketball": {
+        "id": 1,
+        "name": "BASKETBALL",
+        "displayText": "BASKETBALL",
+        "preference": 1
+    },
+    "badminton": {
+        "id": 2,
+        "name": "BADMINTON",
+        "displayText": "BADMINTON",
+        "preference": 2
+    },
+    "tennis": {
+        "id": 3,
+        "name": "TENNIS",
+        "displayText": "TENNIS",
+        "preference": 3
+    },
+    "swimming": {
+        "id": 4,
+        "name": "SWIMMING",
+        "displayText": "SWIMMING",
+        "preference": 4
+    },
+    "cricket": {
+        "id": 5,
+        "name": "CRICKET",
+        "displayText": "CRICKET",
+        "preference": 5
+    }
+    // Add more sports as needed
+};
 
 const commonHeaders = {
     "accept": "application/json",
@@ -60,22 +46,23 @@ const commonHeaders = {
     "content-type": "application/json",
     "Cookie": config.cookies
 };
+
 const CURE_FIT_HOST = "www.cult.fit";
 const URI = {
-    "GET_CLASSES": "/api/cult/classes/v2?productType=FITNESS",
-    "BOOK_CLASS": "/api/cult/class/${activityID}/book"
+    "GET_CLASSES": "/api/sport/classes/v2?productType=SPORT", // Changed endpoint
+    "BOOK_CLASS": "/api/sport/slot/${slotID}/book" // Changed endpoint
 };
+
 const HTTP_POST = "POST",
     HTTP_GET = "GET";
 
-
 const PREFERRED_SLOTS = config.preferredSlots || ['09:00:00'];
 const PREFERRED_CENTER = config.preferredCenter || 1515;
-const PREFERRED_WORKOUT_NAME = config.preferredWorkout || "HRX WORKOUT";
+const PREFERRED_SPORT_NAME = config.preferredSport || "BADMINTON"; // Changed config key
 const ENABLE_WAITLIST = config.enableWaitlist !== false;
 
-const PREFERRED_CLASSES_IN_ORDER = Object.values(ActivityType).filter(
-    activity => activity.name === PREFERRED_WORKOUT_NAME
+const PREFERRED_SPORTS_IN_ORDER = Object.values(ActivityType).filter(
+    activity => activity.name === PREFERRED_SPORT_NAME
 );
 
 function hasBookingForDate(classesForDay) {
@@ -108,27 +95,27 @@ async function main() {
         let slots = [];
         
         for (let slot of PREFERRED_SLOTS) {
-            slots = getSlots(classes.classByDateMap[date], slot, PREFERRED_CLASSES_IN_ORDER);
+            slots = getSlots(classes.classByDateMap[date], slot, PREFERRED_SPORTS_IN_ORDER);
             
             if (slots.length > 0) {
-                let classInfo = slots[0];
-                console.log(`Found ${PREFERRED_WORKOUT_NAME} at ${slot} on ${date}`);
+                let sportInfo = slots[0];
+                console.log(`Found ${PREFERRED_SPORT_NAME} at ${slot} on ${date}`);
                 
-                if (classInfo.state === 'WAITLIST_AVAILABLE') {
-                    let waitlistCount = classInfo.waitlistInfo && classInfo.waitlistInfo.waitlistedUserCount || 0;
+                if (sportInfo.state === 'WAITLIST_AVAILABLE') {
+                    let waitlistCount = sportInfo.waitlistInfo && sportInfo.waitlistInfo.waitlistedUserCount || 0;
                     console.log(`Joining waitlist (${waitlistCount} people ahead)`);
                 } else {
-                    console.log(`Booking (${classInfo.availableSeats} seats available)`);
+                    console.log(`Booking (${sportInfo.availableSeats} seats available)`);
                 }
                 
-                await bookClass(classInfo.id);
-                console.log("Class booked successfully!");
+                await bookSport(sportInfo.id);
+                console.log("Sport slot booked successfully!");
                 break;
             }
         }
         
         if (slots.length === 0) {
-            console.log(`No ${PREFERRED_WORKOUT_NAME} classes available on ${date}`);
+            console.log(`No ${PREFERRED_SPORT_NAME} slots available on ${date}`);
         }
     } catch (error) {
         errorHandler(error);
@@ -137,9 +124,8 @@ async function main() {
 
 main();
 
-
-async function bookClass(activityID) {
-    return await makeAPICall({}, CURE_FIT_HOST, "/api/cult/class/" + activityID + "/book", HTTP_POST, commonHeaders);
+async function bookSport(slotID) {
+    return await makeAPICall({}, CURE_FIT_HOST, "/api/sport/slot/" + slotID + "/book", HTTP_POST, commonHeaders);
 }
 
 async function makeAPICall(request, host, path, method, headers) {
@@ -175,7 +161,7 @@ async function makeAPICall(request, host, path, method, headers) {
     return await response.text();
 }
 
-function getSlots(classesForDay, slot, classTypes) {
+function getSlots(classesForDay, slot, sportTypes) {
     
     let timeSlot = classesForDay.classByTimeList.filter(function (classByTime) {
         return classByTime.id == slot;
@@ -193,9 +179,9 @@ function getSlots(classesForDay, slot, classTypes) {
         return [];
     }
     
-    let classIDs = centerClasses.classes.filter(function (classs) {
-        let filterElement = classTypes.filter(function (classType) {
-            return classType.id == classs.workoutId && classType.name == classs.workoutName
+    let slotIDs = centerClasses.classes.filter(function (classs) {
+        let filterElement = sportTypes.filter(function (sportType) {
+            return sportType.id == classs.sportId && sportType.name == classs.sportName
         })[0];
         if (!filterElement) {
             return false;
@@ -208,11 +194,11 @@ function getSlots(classesForDay, slot, classTypes) {
             return classs.state === 'AVAILABLE';
         }
     })
-    .sort(function (class1, class2) {
-        return class1.preference - class2.preference;
+    .sort(function (slot1, slot2) {
+        return slot1.preference - slot2.preference;
     });
     
-    return classIDs;
+    return slotIDs;
 }
 
 function errorHandler(error) {

@@ -46,8 +46,8 @@ const commonHeaders = {
 
 const CURE_FIT_HOST = "www.cult.fit";
 const URI = {
-    "GET_CLASSES": "/api/sport/classes/v2?productType=SPORT", // Changed endpoint
-    "BOOK_CLASS": "/api/sport/slot/${slotID}/book" // Changed endpoint
+    "GET_SCHEDULE": "/api/v2/fitso/schedule", // Updated endpoint for schedule
+    "BOOK_CLASS": "/api/v2/fitso/class/book" // Updated booking endpoint
 };
 
 const HTTP_POST = "POST",
@@ -62,57 +62,45 @@ const PREFERRED_SPORTS_IN_ORDER = Object.values(ActivityType).filter(
     activity => activity.name === PREFERRED_SPORT_NAME
 );
 
-function hasBookingForDate(classesForDay) {
-    for (let timeSlot of classesForDay.classByTimeList) {
-        for (let centerClass of timeSlot.centerWiseClasses) {
-            if (centerClass.centerId === PREFERRED_CENTER) {
-                for (let classs of centerClass.classes) {
-                    if (classs.state === 'BOOKED' || classs.isBooked === true) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
-
 async function main() {
     try {
-        let classes = await makeAPICall({}, CURE_FIT_HOST, URI.GET_CLASSES, HTTP_GET, commonHeaders);
-        let date = classes.days[classes.days.length - 1].id;
-        
-        console.log(`Booking for ${date}`);
-        
-        if (hasBookingForDate(classes.classByDateMap[date])) {
-            console.log(`Already booked on ${date}. Skipping.`);
+        // Fetch schedule data from new API
+        const scheduleResponse = await makeAPICall({}, CURE_FIT_HOST, URI.GET_SCHEDULE, HTTP_GET, commonHeaders);
+        const lastDateKey = Object.keys(scheduleResponse.classByDateMap).sort().slice(-1)[0];
+        const classesForDay = scheduleResponse.classByDateMap[lastDateKey];
+        const dateStr = lastDateKey;
+
+        console.log(`Booking for ${dateStr}`);
+
+        if (hasBookingForDate(classesForDay)) {
+            console.log(`Already booked on ${dateStr}. Skipping.`);
             return;
         }
-        
+
         let slots = [];
-        
+
         for (let slot of PREFERRED_SLOTS) {
-            slots = getSlots(classes.classByDateMap[date], slot, PREFERRED_SPORTS_IN_ORDER);
-            
+            slots = getSlots(classesForDay, slot, PREFERRED_SPORTS_IN_ORDER);
+
             if (slots.length > 0) {
-                let sportInfo = slots[0];
-                console.log(`Found ${PREFERRED_SPORT_NAME} at ${slot} on ${date}`);
-                
+                const sportInfo = slots[0];
+                console.log(`Found ${PREFERRED_SPORT_NAME} at ${slot} on ${dateStr}`);
+
                 if (sportInfo.state === 'WAITLIST_AVAILABLE') {
-                    let waitlistCount = sportInfo.waitlistInfo && sportInfo.waitlistInfo.waitlistedUserCount || 0;
+                    const waitlistCount = sportInfo.waitlistInfo ? sportInfo.waitlistInfo.waitlistedUserCount : 0;
                     console.log(`Joining waitlist (${waitlistCount} people ahead)`);
                 } else {
                     console.log(`Booking (${sportInfo.availableSeats} seats available)`);
                 }
-                
-                await bookSport(sportInfo.id);
+
+                await bookSport(sportInfo.id, dateStr);
                 console.log("Sport slot booked successfully!");
                 break;
             }
         }
-        
+
         if (slots.length === 0) {
-            console.log(`No ${PREFERRED_SPORT_NAME} slots available on ${date}`);
+            console.log(`No ${PREFERRED_SPORT_NAME} slots available on ${dateStr}`);
         }
     } catch (error) {
         errorHandler(error);
@@ -121,8 +109,30 @@ async function main() {
 
 main();
 
-async function bookSport(slotID) {
-    return await makeAPICall({}, CURE_FIT_HOST, "/api/sport/slot/" + slotID + "/book", HTTP_POST, commonHeaders);
+async function bookSport(slotID, dateStr) {
+    // Construct booking request body
+    const requestBody = {
+        "slotId": slotID,
+        "bookingTimestamp": getBookingTimestamp(dateStr, slotID),
+        "centerId": PREFERRED_CENTER,
+        "workoutId": getWorkoutIdBySlotId(slotID),
+        "productArenaCategoryId": PRODUCT_ARENA_CATEGORY_ID,
+        "params": null
+    };
+    return await makeAPICall(requestBody, CURE_FIT_HOST, URI.BOOK_CLASS, HTTP_POST, commonHeaders);
+}
+
+// Helper to get workout ID by slot ID
+function getWorkoutIdBySlotId(slotId) {
+    const activity = Object.values(ActivityType).find(a => a.id === slotId);
+    return activity ? activity.workoutId : null;
+}
+
+// Helper to generate booking timestamp (for simplicity, using current time)
+function getBookingTimestamp(dateStr, slotId) {
+    const dateTimeStr = `${dateStr} ${slotId}`;
+    const dt = new Date(dateTimeStr);
+    return Math.floor(dt.getTime()); // milliseconds
 }
 
 async function makeAPICall(request, host, path, method, headers) {
@@ -159,42 +169,41 @@ async function makeAPICall(request, host, path, method, headers) {
 }
 
 function getSlots(classesForDay, slot, sportTypes) {
-    
-    let timeSlot = classesForDay.classByTimeList.filter(function (classByTime) {
-        return classByTime.id == slot;
-    })[0];
-    
+    let timeSlot = classesForDay.classByTimeList.find(t => t.id == slot);
     if (!timeSlot) {
         return [];
     }
-    
-    let centerClasses = timeSlot.centerWiseClasses.filter(function (center) {
-        return center.centerId == PREFERRED_CENTER;
-    })[0];
-    
+
+    let centerClasses = timeSlot.centerWiseClasses.find(c => c.centerId == PREFERRED_CENTER);
     if (!centerClasses) {
         return [];
     }
-    
-    let slotIDs = centerClasses.classes.filter(function (classs) {
-        let filterElement = sportTypes.filter(function (sportType) {
-            return sportType.id == classs.sportId && sportType.name == classs.sportName
-        })[0];
-        if (!filterElement) {
-            return false;
-        }
-        classs.preference = filterElement.preference;
-        
+
+    let slotIDs = centerClasses.classes.filter(classs => {
+        const matchSportType = sportTypes.some(st => st.id === classs.sportId && st.name === classs.sportName);
+        if (!matchSportType) return false;
+
         if (ENABLE_WAITLIST) {
             return classs.state === 'AVAILABLE' || classs.state === 'WAITLIST_AVAILABLE';
         } else {
             return classs.state === 'AVAILABLE';
         }
-    })
-    .sort(function (slot1, slot2) {
-        return slot1.preference - slot2.preference;
+    }).map(classs => {
+        return {
+            id: classs.id,
+            state: classs.state,
+            availableSeats: classs.availableSeats,
+            waitlistInfo: classs.waitlistInfo,
+            startTime: classs.startTime,
+            date: classs.date,
+            workoutName: classs.workoutName
+        };
+    }).sort((a, b) => {
+        const prefA = sportTypes.find(st => st.id === a.sportId).preference;
+        const prefB = sportTypes.find(st => st.id === b.sportId).preference;
+        return prefA - prefB;
     });
-    
+
     return slotIDs;
 }
 

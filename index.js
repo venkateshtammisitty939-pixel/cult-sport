@@ -3,37 +3,34 @@ const config = require('./config');
 
 // Update for Cult Sport activities
 const ActivityType = {
-    "basketball": {
-        "id": 1,
-        "name": "BASKETBALL",
-        "displayText": "BASKETBALL",
-        "preference": 1
-    },
     "badminton": {
         "id": 2,
         "name": "BADMINTON",
         "displayText": "BADMINTON",
-        "preference": 2
-    },
-    "tennis": {
-        "id": 3,
-        "name": "TENNIS",
-        "displayText": "TENNIS",
-        "preference": 3
+        "preference": 1,
+        "workoutId": 350
     },
     "swimming": {
         "id": 4,
         "name": "SWIMMING",
         "displayText": "SWIMMING",
-        "preference": 4
+        "preference": 2,
+        "workoutId": 351
     },
-    "cricket": {
-        "id": 5,
-        "name": "CRICKET",
-        "displayText": "CRICKET",
-        "preference": 5
+    "table_tennis": {
+        "id": 6,
+        "name": "TABLE_TENNIS",
+        "displayText": "TABLE TENNIS",
+        "preference": 3,
+        "workoutId": 352
+    },
+    "squash": {
+        "id": 7,
+        "name": "SQUASH",
+        "displayText": "SQUASH",
+        "preference": 4,
+        "workoutId": 353
     }
-    // Add more sports as needed
 };
 
 const commonHeaders = {

@@ -66,7 +66,7 @@ if (process.env.CURL_COMMAND) {
 
 config.preferredCenter = process.env.PREFERRED_CENTER ? parseInt(process.env.PREFERRED_CENTER) : null;
 config.preferredSlots = process.env.PREFERRED_SLOTS ? process.env.PREFERRED_SLOTS.split(',') : null;
-config.preferredWorkout = process.env.PREFERRED_WORKOUT || null;
+config.preferredWorkout = process.env.PREFERRED_SPORT || null;
 config.enableWaitlist = process.env.ENABLE_WAITLIST !== 'false';
 
 module.exports = config;

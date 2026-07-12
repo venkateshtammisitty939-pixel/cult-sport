@@ -1,7 +1,8 @@
 "use strict";
-const config = require('./config'); // Ensure this points to your actual config.js
 
-// Update for Cult Sport activities
+const config = require('./config');
+
+// Define your cult sport activities
 const ActivityType = {
     "badminton": {
         "id": 2,
@@ -33,6 +34,7 @@ const ActivityType = {
     }
 };
 
+// Common headers for API requests
 const commonHeaders = {
     "accept": "application/json",
     "apikey": config.apiKey,
@@ -45,20 +47,23 @@ const commonHeaders = {
 };
 
 const CURE_FIT_HOST = "www.cult.fit";
+
+// API endpoints for schedule and booking
 const URI = {
     "GET_SCHEDULE": "/api/v2/fitso/schedule",
     "BOOK_CLASS": "/api/v2/fitso/class/book"
 };
 
-const HTTP_POST = "POST",
-    HTTP_GET = "GET";
+const HTTP_POST = "POST";
+const HTTP_GET = "GET";
 
-// Use config values
+// Use config variables
 const PREFERRED_SLOTS = config.preferredSlots || ['09:00:00'];
 const PREFERRED_CENTER = config.preferredCenter || 1515;
-const PREFERRED_SPORT_NAME = config.preferredSport || "BADMINTON"; // make sure key matches your config
-const ENABLE_WAITLIST = config.enableWaitlist !== false;
+const PREFERRED_SPORT_NAME = config.preferredSport || "BADMINTON";
+const ENABLE_WAITLIST = config.enableWaitlist;
 
+// Filter activity types based on preferred sport
 const PREFERRED_SPORTS_IN_ORDER = Object.values(ActivityType).filter(
     activity => activity.name === PREFERRED_SPORT_NAME
 );
@@ -116,7 +121,6 @@ async function bookSport(slotID, dateStr) {
         "bookingTimestamp": bookingTimestamp,
         "centerId": PREFERRED_CENTER,
         "workoutId": getWorkoutIdBySlotId(slotID),
-        "productArenaCategoryId": PRODUCT_ARENA_CATEGORY_ID, // ensure this variable is defined
         "params": null
     };
     try {
@@ -158,7 +162,6 @@ async function makeAPICall(request, host, path, method, headers) {
     }
 
     const response = await fetch(url, options);
-
     const responseText = await response.text();
 
     if (!response.ok) {

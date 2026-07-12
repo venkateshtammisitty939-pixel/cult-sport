@@ -116,13 +116,15 @@ main();
 
 async function bookSport(slotID, dateStr) {
     const bookingTimestamp = getBookingTimestamp(dateStr, slotID);
+    const workoutId = getWorkoutIdBySlotId(slotID);
     const requestBody = {
         "slotId": slotID,
         "bookingTimestamp": bookingTimestamp,
         "centerId": PREFERRED_CENTER,
-        "workoutId": getWorkoutIdBySlotId(slotID),
+        "workoutId": workoutId,
         "params": null
     };
+    console.log("Attempting to book with payload:", JSON.stringify(requestBody));
     try {
         const response = await makeAPICall(requestBody, CURE_FIT_HOST, URI.BOOK_CLASS, HTTP_POST, commonHeaders);
         return response;

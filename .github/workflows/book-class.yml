@@ -1,4 +1,4 @@
-name: Auto Book Cult Class
+name: Auto Book Cult Sport Class
 
 on:  
   workflow_dispatch:

@@ -1,5 +1,5 @@
 "use strict";
-const config = require('./config');
+const config = require('./config'); // Ensure this points to your actual config.js
 
 // Update for Cult Sport activities
 const ActivityType = {
@@ -46,16 +46,17 @@ const commonHeaders = {
 
 const CURE_FIT_HOST = "www.cult.fit";
 const URI = {
-    "GET_SCHEDULE": "/api/v2/fitso/schedule", // Updated endpoint for schedule
-    "BOOK_CLASS": "/api/v2/fitso/class/book" // Updated booking endpoint
+    "GET_SCHEDULE": "/api/v2/fitso/schedule",
+    "BOOK_CLASS": "/api/v2/fitso/class/book"
 };
 
 const HTTP_POST = "POST",
     HTTP_GET = "GET";
 
+// Use config values
 const PREFERRED_SLOTS = config.preferredSlots || ['09:00:00'];
 const PREFERRED_CENTER = config.preferredCenter || 1515;
-const PREFERRED_SPORT_NAME = config.preferredSport || "BADMINTON"; // Changed config key
+const PREFERRED_SPORT_NAME = config.preferredSport || "BADMINTON"; // make sure key matches your config
 const ENABLE_WAITLIST = config.enableWaitlist !== false;
 
 const PREFERRED_SPORTS_IN_ORDER = Object.values(ActivityType).filter(
@@ -64,7 +65,6 @@ const PREFERRED_SPORTS_IN_ORDER = Object.values(ActivityType).filter(
 
 async function main() {
     try {
-        // Fetch schedule data from new API
         const scheduleResponse = await makeAPICall({}, CURE_FIT_HOST, URI.GET_SCHEDULE, HTTP_GET, commonHeaders);
         const lastDateKey = Object.keys(scheduleResponse.classByDateMap).sort().slice(-1)[0];
         const classesForDay = scheduleResponse.classByDateMap[lastDateKey];
@@ -110,14 +110,13 @@ async function main() {
 main();
 
 async function bookSport(slotID, dateStr) {
-    // Generate a proper booking timestamp
     const bookingTimestamp = getBookingTimestamp(dateStr, slotID);
     const requestBody = {
         "slotId": slotID,
         "bookingTimestamp": bookingTimestamp,
         "centerId": PREFERRED_CENTER,
         "workoutId": getWorkoutIdBySlotId(slotID),
-        "productArenaCategoryId": PRODUCT_ARENA_CATEGORY_ID,
+        "productArenaCategoryId": PRODUCT_ARENA_CATEGORY_ID, // ensure this variable is defined
         "params": null
     };
     try {
@@ -129,17 +128,15 @@ async function bookSport(slotID, dateStr) {
     }
 }
 
-// Helper to get workout ID by slot ID
 function getWorkoutIdBySlotId(slotId) {
     const activity = Object.values(ActivityType).find(a => a.id === slotId);
     return activity ? activity.workoutId : null;
 }
 
-// Helper to generate booking timestamp (for simplicity, using current time)
 function getBookingTimestamp(dateStr, slotId) {
     const dateTimeStr = `${dateStr} ${slotId}`;
     const dt = new Date(dateTimeStr);
-    return Math.floor(dt.getTime()); // milliseconds
+    return Math.floor(dt.getTime());
 }
 
 async function makeAPICall(request, host, path, method, headers) {

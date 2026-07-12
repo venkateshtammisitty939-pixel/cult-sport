@@ -110,16 +110,23 @@ async function main() {
 main();
 
 async function bookSport(slotID, dateStr) {
-    // Construct booking request body
+    // Generate a proper booking timestamp
+    const bookingTimestamp = getBookingTimestamp(dateStr, slotID);
     const requestBody = {
         "slotId": slotID,
-        "bookingTimestamp": getBookingTimestamp(dateStr, slotID),
+        "bookingTimestamp": bookingTimestamp,
         "centerId": PREFERRED_CENTER,
         "workoutId": getWorkoutIdBySlotId(slotID),
         "productArenaCategoryId": PRODUCT_ARENA_CATEGORY_ID,
         "params": null
     };
-    return await makeAPICall(requestBody, CURE_FIT_HOST, URI.BOOK_CLASS, HTTP_POST, commonHeaders);
+    try {
+        const response = await makeAPICall(requestBody, CURE_FIT_HOST, URI.BOOK_CLASS, HTTP_POST, commonHeaders);
+        return response;
+    } catch (err) {
+        console.error("Booking API error:", err);
+        throw err;
+    }
 }
 
 // Helper to get workout ID by slot ID
@@ -155,17 +162,19 @@ async function makeAPICall(request, host, path, method, headers) {
 
     const response = await fetch(url, options);
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
+        console.error("Request failed with status", response.status);
+        console.error("Response body:", responseText);
+        throw new Error(responseText);
     }
 
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-        return await response.json();
+        return JSON.parse(responseText);
     }
-
-    return await response.text();
+    return responseText;
 }
 
 function getSlots(classesForDay, slot, sportTypes) {
